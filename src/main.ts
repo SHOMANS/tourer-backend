@@ -24,9 +24,11 @@ async function bootstrap() {
     credentials: true, // Allow cookies and auth headers
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Bind to all network interfaces to allow mobile device access
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
   console.log(
     `Backend is running on: http://localhost:${process.env.PORT ?? 3000}`,
   );
+  console.log(`Network access: http://10.0.0.169:${process.env.PORT ?? 3000}`);
 }
 bootstrap();

@@ -13,7 +13,18 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String?  // Optional for OAuth users
+  password  String?  // Optional for social logins
+  firstName String?
+  lastName  String?
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  
+  // Social login fields
+  googleId     String? @unique
+  photoUrl     String?
+  provider     AuthProvider? @default(LOCAL)
+  providerId   String?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -21,6 +32,18 @@ model User {
   bookings Booking[]
 
   @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+  APPLE
 }
 
 model Package {

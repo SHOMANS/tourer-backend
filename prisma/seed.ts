@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -30,22 +31,37 @@ async function main() {
 
   console.log(`✅ Created ${packages.count} sample packages`);
 
-  // Create a sample user
-  const user = await prisma.user.create({
+  // Create sample users with hashed passwords
+
+  const adminUser = await prisma.user.create({
     data: {
-      email: 'demo@example.com',
-      // Note: No password for now (will be added in Phase 1 - Auth)
+      email: 'admin@tourer.com',
+      password: await bcrypt.hash('admin123', 12),
+      firstName: 'Admin',
+      lastName: 'User',
+      role: 'ADMIN',
     },
   });
 
-  console.log(`✅ Created sample user: ${user.email}`);
+  const demoUser = await prisma.user.create({
+    data: {
+      email: 'demo@example.com',
+      password: await bcrypt.hash('demo123', 12),
+      firstName: 'Demo',
+      lastName: 'User',
+      role: 'USER',
+    },
+  });
+
+  console.log(`✅ Created admin user: ${adminUser.email}`);
+  console.log(`✅ Created demo user: ${demoUser.email}`);
 
   // Create a sample booking
   const packagesList = await prisma.package.findMany();
   if (packagesList.length > 0) {
     const booking = await prisma.booking.create({
       data: {
-        userId: user.id,
+        userId: demoUser.id,
         packageId: packagesList[0].id,
         status: 'CONFIRMED',
       },

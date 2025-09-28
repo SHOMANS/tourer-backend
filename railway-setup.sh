@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Railway Environment Variables Setup Script
+# Run this locally or copy these variables to Railway dashboard
+
+echo "Setting up environment variables for Railway deployment..."
+echo ""
+echo "Required Environment Variables for Railway:"
+echo "=========================================="
+echo ""
+echo "1. DATABASE_URL (automatically set when you add PostgreSQL service)"
+echo "   Format: postgresql://postgres:password@host:port/database"
+echo ""
+echo "2. JWT_SECRET (set this manually)"
+echo "   Example: JWT_SECRET=your-super-secure-random-string-for-jwt-signing"
+echo ""
+echo "3. PORT (Railway sets this automatically, but you can override)"
+echo "   Default: PORT=3000"
+echo ""
+echo "4. Optional: Google OAuth (if using social login)"
+echo "   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com"
+echo "   GOOGLE_CLIENT_SECRET=your-client-secret"
+echo ""
+echo "Steps to configure in Railway:"
+echo "1. Go to Railway dashboard → Your Project"
+echo "2. Add PostgreSQL database service (this sets DATABASE_URL automatically)"
+echo "3. Go to your backend service → Variables tab"
+echo "4. Add JWT_SECRET with a secure random string"
+echo "5. Add other variables as needed"
+echo ""
+echo "Railway will automatically connect your services!"

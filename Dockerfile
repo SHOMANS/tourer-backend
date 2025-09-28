@@ -38,8 +38,8 @@ COPY package.json pnpm-lock.yaml ./
 # Copy Prisma schema
 COPY prisma ./prisma
 
-# Install only production dependencies and generate Prisma client
-RUN pnpm install --prod --frozen-lockfile && npx prisma generate
+# Install ALL dependencies (production runtime needs all modules)
+RUN pnpm install --frozen-lockfile && npx prisma generate
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist

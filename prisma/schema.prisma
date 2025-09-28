@@ -47,26 +47,105 @@ enum AuthProvider {
 }
 
 model Package {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  price       Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String      @id @default(cuid())
+  title         String
+  description   String?
+  shortDescription String?
+  price         Decimal     @db.Decimal(10, 2)
+  originalPrice Decimal?    @db.Decimal(10, 2) // For showing discounts
+  currency      String      @default("USD")
+  
+  // Tour details
+  duration      Int         @default(1) // Duration in days
+  maxGuests     Int         @default(10)
+  minAge        Int?        
+  difficulty    Difficulty  @default(EASY)
+  category      Category    @default(ADVENTURE)
+  
+  // Location details
+  location      String      @default("TBD") // Main location/city
+  country       String?
+  coordinates   String?     // JSON string with lat/lng
+  
+  // Media and content
+  images        String[]    // Array of image URLs
+  coverImage    String?     // Main image URL
+  highlights    String[]    // Key highlights
+  includes      String[]    // What's included
+  excludes      String[]    // What's excluded
+  itinerary     Json?       // Detailed day-by-day itinerary
+  
+  // Availability and booking
+  isActive      Boolean     @default(true)
+  isAvailable   Boolean     @default(true)
+  availableFrom DateTime?
+  availableTo   DateTime?
+  
+  // SEO and metadata
+  slug          String?     @unique
+  tags          String[]    // Search tags
+  
+  // Ratings and reviews
+  rating        Float?      @default(0)
+  reviewCount   Int         @default(0)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   // Relations
-  bookings Booking[]
+  bookings      Booking[]
 
   @@map("packages")
 }
 
+enum Category {
+  ADVENTURE
+  CULTURAL
+  NATURE
+  HISTORICAL
+  BEACH
+  MOUNTAIN
+  CITY
+  WILDLIFE
+  LUXURY
+  BUDGET
+  FAMILY
+  ROMANTIC
+}
+
+enum Difficulty {
+  EASY
+  MODERATE
+  CHALLENGING
+  EXTREME
+}
+
 model Booking {
-  id        String        @id @default(cuid())
-  userId    String
-  packageId String
-  status    BookingStatus @default(PENDING)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id          String        @id @default(cuid())
+  userId      String
+  packageId   String
+  status      BookingStatus @default(PENDING)
+  
+  // Booking details
+  startDate   DateTime      @default(now()) // When the tour starts
+  endDate     DateTime?     // When the tour ends (calculated from duration)
+  guests      Int           @default(1)
+  totalPrice  Decimal       @db.Decimal(10, 2) @default(0)
+  currency    String        @default("USD")
+  
+  // Traveler information
+  guestNames  String[]      // Names of all travelers
+  contactInfo Json?         // Contact details, special requirements
+  
+  // Payment information (for future payment integration)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentId     String?      // External payment reference
+  
+  // Booking notes
+  notes       String?       // Special requests or notes
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relations
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -75,9 +154,37 @@ model Booking {
   @@map("bookings")
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
   COMPLETED
+}
+
+model CarouselItem {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  actionType  ActionType  @default(INTERNAL)
+  actionValue String      // URL or route name
+  isActive    Boolean     @default(true)
+  sortOrder   Int         @default(0)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("carousel_items")
+}
+
+enum ActionType {
+  INTERNAL    // Navigate to internal screen
+  EXTERNAL    // Open external URL
 }

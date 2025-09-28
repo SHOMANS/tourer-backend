@@ -36,11 +36,51 @@ async function bootstrap() {
     allowedOrigins.push(process.env.ADMIN_URL);
   }
 
+  // CORS configuration that handles both web and mobile app requests
   app.enableCors({
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? allowedOrigins.filter((origin) => !origin.includes('localhost'))
-        : allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+
+      // In production, filter out localhost origins for web browsers
+      // but still allow mobile app origins
+      if (process.env.NODE_ENV === 'production') {
+        const productionOrigins = allowedOrigins.filter(
+          (allowedOrigin) =>
+            !allowedOrigin.includes('localhost') ||
+            allowedOrigin.includes('exp://'),
+        );
+
+        // Check if the origin is allowed
+        if (
+          productionOrigins.some((allowedOrigin) => {
+            if (allowedOrigin.includes('*')) {
+              // Handle wildcard patterns like exp://192.168.*
+              const pattern = allowedOrigin.replace(/\*/g, '.*');
+              return new RegExp(pattern).test(origin);
+            }
+            return origin === allowedOrigin;
+          })
+        ) {
+          return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'), false);
+      } else {
+        // Development: allow all configured origins
+        if (
+          allowedOrigins.some((allowedOrigin) => {
+            if (allowedOrigin.includes('*')) {
+              const pattern = allowedOrigin.replace(/\*/g, '.*');
+              return new RegExp(pattern).test(origin);
+            }
+            return origin === allowedOrigin;
+          })
+        ) {
+          return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'), false);
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',

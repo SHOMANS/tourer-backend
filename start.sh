@@ -2,7 +2,7 @@
 set -e
 
 echo "🔄 Running database migrations..."
-pnpm deploy
+pnpm run deploy
 
 echo "🚀 Starting application..."
 exec pnpm start:prod

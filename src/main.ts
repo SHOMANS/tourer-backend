@@ -35,7 +35,7 @@ async function bootstrap() {
   if (process.env.ADMIN_URL) {
     allowedOrigins.push(process.env.ADMIN_URL);
   }
-  
+
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'

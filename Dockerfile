@@ -47,12 +47,13 @@ COPY --from=builder /app/dist ./dist
 # Expose port
 EXPOSE 3000
 
+# Copy startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Health check (Railway compatible)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "const http = require('http'); http.get('http://localhost:3000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
-
-# Create startup script that runs migrations before starting the app
-RUN echo '#!/bin/sh\necho "Running database migrations..."\npnpm deploy\necho "Starting application..."\npnpm start:prod' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application with migrations
 CMD ["/app/start.sh"]

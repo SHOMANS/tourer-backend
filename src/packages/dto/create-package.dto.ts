@@ -79,7 +79,7 @@ export class CreatePackageDto {
   category?: Category;
 
   @IsString()
-  location: string;
+  locationName: string;
 
   @IsString()
   @IsOptional()

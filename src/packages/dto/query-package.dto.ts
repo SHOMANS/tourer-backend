@@ -17,7 +17,7 @@ export class QueryPackageDto {
 
   @IsOptional()
   @IsString()
-  location?: string;
+  locationName?: string;
 
   @IsOptional()
   @IsString()

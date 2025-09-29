@@ -39,7 +39,7 @@ export class PackagesService {
       search,
       category,
       difficulty,
-      location,
+      locationName,
       country,
       minPrice,
       maxPrice,
@@ -61,14 +61,14 @@ export class PackagesService {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-        { location: { contains: search, mode: 'insensitive' } },
+        { locationName: { contains: search, mode: 'insensitive' } },
         { tags: { hasSome: [search] } },
       ];
     }
 
     if (category) where.category = category;
     if (difficulty) where.difficulty = difficulty;
-    if (location) where.location = { contains: location, mode: 'insensitive' };
+    if (locationName) where.locationName = { contains: locationName, mode: 'insensitive' };
     if (country) where.country = { contains: country, mode: 'insensitive' };
 
     if (minPrice || maxPrice) {

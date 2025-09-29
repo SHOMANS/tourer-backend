@@ -91,4 +91,33 @@ export class UploadController {
       data: uploadedFiles,
     };
   }
+
+  @Post('review-images')
+  @UseInterceptors(
+    FilesInterceptor('images', 5, { // Allow up to 5 images for reviews
+      storage,
+      fileFilter: imageFileFilter,
+      limits: {
+        fileSize: 3 * 1024 * 1024, // 3MB limit per file for reviews
+      },
+    }),
+  )
+  uploadReviewImages(@UploadedFiles() files: any[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files uploaded');
+    }
+
+    const uploadedFiles = files.map((file) => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      url: `/uploads/${file.filename}`,
+    }));
+
+    return {
+      message: 'Review images uploaded successfully',
+      data: uploadedFiles,
+    };
+  }
 }

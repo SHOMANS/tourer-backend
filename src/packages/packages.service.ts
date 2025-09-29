@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
@@ -27,7 +31,9 @@ export class PackagesService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new BadRequestException('Package with this slug already exists');
+          throw new BadRequestException(
+            'Package with this slug already exists',
+          );
         }
       }
       throw error;
@@ -68,7 +74,8 @@ export class PackagesService {
 
     if (category) where.category = category;
     if (difficulty) where.difficulty = difficulty;
-    if (locationName) where.locationName = { contains: locationName, mode: 'insensitive' };
+    if (locationName)
+      where.locationName = { contains: locationName, mode: 'insensitive' };
     if (country) where.country = { contains: country, mode: 'insensitive' };
 
     if (minPrice || maxPrice) {
@@ -132,7 +139,10 @@ export class PackagesService {
     return package_;
   }
 
-  async update(id: string, updatePackageDto: UpdatePackageDto): Promise<Package> {
+  async update(
+    id: string,
+    updatePackageDto: UpdatePackageDto,
+  ): Promise<Package> {
     try {
       // Check if package exists
       await this.findOne(id);
@@ -149,7 +159,9 @@ export class PackagesService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new BadRequestException('Package with this slug already exists');
+          throw new BadRequestException(
+            'Package with this slug already exists',
+          );
         }
       }
       throw error;
@@ -173,17 +185,14 @@ export class PackagesService {
       distinct: ['category'],
       where: { isActive: true },
     });
-    
-    return categories.map(p => p.category);
+
+    return categories.map((p) => p.category);
   }
 
   async getPopular(limit: number = 6) {
     return this.prisma.package.findMany({
       where: { isActive: true, isAvailable: true },
-      orderBy: [
-        { rating: 'desc' },
-        { reviewCount: 'desc' },
-      ],
+      orderBy: [{ rating: 'desc' }, { reviewCount: 'desc' }],
       take: limit,
     });
   }
@@ -195,7 +204,10 @@ export class PackagesService {
       .replace(/(^-|-$)/g, '');
   }
 
-  private async ensureUniqueSlug(slug: string, excludeId?: string): Promise<void> {
+  private async ensureUniqueSlug(
+    slug: string,
+    excludeId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.package.findUnique({
       where: { slug },
     });
@@ -208,7 +220,9 @@ export class PackagesService {
   // Review methods
   async getReviews(packageId: string, query: any) {
     const { page = 1, limit = 10, rating, verified } = query;
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
 
     const where: any = {
       packageId,
@@ -238,7 +252,7 @@ export class PackagesService {
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: limit,
+        take: limitNum,
       }),
       this.prisma.review.count({ where }),
     ]);
@@ -246,10 +260,10 @@ export class PackagesService {
     return {
       reviews,
       pagination: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / limitNum),
       },
     };
   }
@@ -360,9 +374,10 @@ export class PackagesService {
     });
 
     const totalReviews = reviews.length;
-    const averageRating = totalReviews > 0 
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
-      : 0;
+    const averageRating =
+      totalReviews > 0
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+        : 0;
 
     await this.prisma.package.update({
       where: { id: packageId },
@@ -371,5 +386,76 @@ export class PackagesService {
         reviewCount: totalReviews,
       },
     });
+  }
+
+  // Admin-specific method to get all reviews
+  async getAllReviewsForAdmin(query: any) {
+    const {
+      page = 1,
+      limit = 10,
+      isApproved,
+      isVerified,
+      rating,
+      packageId,
+    } = query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = {};
+
+    if (isApproved !== undefined) {
+      where.isApproved = isApproved === 'true';
+    }
+
+    if (isVerified !== undefined) {
+      where.isVerified = isVerified === 'true';
+    }
+
+    if (rating) {
+      where.rating = parseInt(rating);
+    }
+
+    if (packageId) {
+      where.packageId = packageId;
+    }
+
+    const [reviews, total] = await Promise.all([
+      this.prisma.review.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              photoUrl: true,
+            },
+          },
+          package: {
+            select: {
+              id: true,
+              title: true,
+              locationName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      this.prisma.review.count({ where }),
+    ]);
+
+    return {
+      reviews,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    };
   }
 }

@@ -1,12 +1,14 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { PackagesService } from '../packages/packages.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AdminController {
+  constructor(private readonly packagesService: PackagesService) {}
   @Get('dashboard')
   @Roles(UserRole.ADMIN)
   async getDashboard(@GetUser() user: any) {
@@ -35,5 +37,11 @@ export class AdminController {
         { id: '2', email: 'demo@example.com', role: 'USER' },
       ],
     };
+  }
+
+  @Get('reviews')
+  @Roles(UserRole.ADMIN)
+  async getAllReviews(@Query() query: any) {
+    return this.packagesService.getAllReviewsForAdmin(query);
   }
 }

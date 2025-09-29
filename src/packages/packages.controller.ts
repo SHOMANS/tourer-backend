@@ -83,7 +83,11 @@ export class PackagesController {
     @Body() createReviewDto: CreateReviewDto,
     @GetUser() user: any,
   ) {
-    return this.packagesService.createReview(packageId, createReviewDto, user.id);
+    return this.packagesService.createReview(
+      packageId,
+      createReviewDto,
+      user.id,
+    );
   }
 
   @Patch('reviews/:reviewId')

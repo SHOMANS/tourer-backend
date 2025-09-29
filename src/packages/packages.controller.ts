@@ -13,9 +13,12 @@ import { PackagesService } from './packages.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { QueryPackageDto } from './dto/query-package.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
+import { QueryReviewsDto } from './dto/query-reviews.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator';
 
 @Controller('packages')
 export class PackagesController {
@@ -65,5 +68,34 @@ export class PackagesController {
   @Roles(UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.packagesService.remove(id);
+  }
+
+  // Review endpoints
+  @Get(':id/reviews')
+  getReviews(@Param('id') packageId: string, @Query() query: QueryReviewsDto) {
+    return this.packagesService.getReviews(packageId, query);
+  }
+
+  @Post(':id/reviews')
+  @UseGuards(JwtAuthGuard)
+  createReview(
+    @Param('id') packageId: string,
+    @Body() createReviewDto: CreateReviewDto,
+    @GetUser() user: any,
+  ) {
+    return this.packagesService.createReview(packageId, createReviewDto, user.id);
+  }
+
+  @Patch('reviews/:reviewId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  approveReview(@Param('reviewId') reviewId: string) {
+    return this.packagesService.approveReview(reviewId);
+  }
+
+  @Delete('reviews/:reviewId')
+  @UseGuards(JwtAuthGuard)
+  deleteReview(@Param('reviewId') reviewId: string, @GetUser() user: any) {
+    return this.packagesService.deleteReview(reviewId, user.id, user.role);
   }
 }

@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { QueryPackageDto } from './dto/query-package.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
+import { QueryReviewsDto } from './dto/query-reviews.dto';
 import { Package, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -201,5 +203,173 @@ export class PackagesService {
     if (existing && existing.id !== excludeId) {
       throw new BadRequestException('Package with this slug already exists');
     }
+  }
+
+  // Review methods
+  async getReviews(packageId: string, query: any) {
+    const { page = 1, limit = 10, rating, verified } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      packageId,
+      isApproved: true,
+    };
+
+    if (rating) {
+      where.rating = rating;
+    }
+
+    if (verified !== undefined) {
+      where.isVerified = verified;
+    }
+
+    const [reviews, total] = await Promise.all([
+      this.prisma.review.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              photoUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.review.count({ where }),
+    ]);
+
+    return {
+      reviews,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async createReview(packageId: string, createReviewDto: any, userId: string) {
+    // Check if package exists
+    const pkg = await this.prisma.package.findUnique({
+      where: { id: packageId },
+    });
+
+    if (!pkg) {
+      throw new NotFoundException('Package not found');
+    }
+
+    // Check if user has already reviewed this package
+    const existingReview = await this.prisma.review.findFirst({
+      where: {
+        userId,
+        packageId,
+      },
+    });
+
+    if (existingReview) {
+      throw new BadRequestException('You have already reviewed this package');
+    }
+
+    // Check if user has booked this package (for verified reviews)
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        userId,
+        packageId,
+        status: 'COMPLETED',
+      },
+    });
+
+    const review = await this.prisma.review.create({
+      data: {
+        ...createReviewDto,
+        userId,
+        packageId,
+        isVerified: !!booking,
+        bookingId: booking?.id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            photoUrl: true,
+          },
+        },
+      },
+    });
+
+    // Update package rating
+    await this.updatePackageRating(packageId);
+
+    return review;
+  }
+
+  async approveReview(reviewId: string) {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+
+    return await this.prisma.review.update({
+      where: { id: reviewId },
+      data: { isApproved: true },
+    });
+  }
+
+  async deleteReview(reviewId: string, userId: string, userRole: string) {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+
+    // Only allow user to delete their own review or admin to delete any
+    if (review.userId !== userId && userRole !== 'ADMIN') {
+      throw new BadRequestException('Not authorized to delete this review');
+    }
+
+    await this.prisma.review.delete({
+      where: { id: reviewId },
+    });
+
+    // Update package rating after deletion
+    await this.updatePackageRating(review.packageId);
+
+    return { message: 'Review deleted successfully' };
+  }
+
+  private async updatePackageRating(packageId: string) {
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        packageId,
+        isApproved: true,
+      },
+      select: { rating: true },
+    });
+
+    const totalReviews = reviews.length;
+    const averageRating = totalReviews > 0 
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+      : 0;
+
+    await this.prisma.package.update({
+      where: { id: packageId },
+      data: {
+        rating: averageRating,
+        reviewCount: totalReviews,
+      },
+    });
   }
 }

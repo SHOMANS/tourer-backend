@@ -55,6 +55,7 @@ model Package {
   price         Decimal     @db.Decimal(10, 2)
   originalPrice Decimal?    @db.Decimal(10, 2) // For showing discounts
   currency      String      @default("USD")
+  pricingType   PricingType @default(PER_PERSON)
   
   // Tour details
   duration      Int         @default(1) // Duration in days
@@ -64,7 +65,7 @@ model Package {
   category      Category    @default(ADVENTURE)
   
   // Location details (basic)
-  location      String      @default("TBD") // Main location/city
+  locationName  String      @default("TBD") // Main location/city
   country       String?
   coordinates   String?     // JSON string with lat/lng
   

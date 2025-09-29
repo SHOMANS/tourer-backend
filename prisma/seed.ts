@@ -6,6 +6,13 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Check if data already exists
+  const existingPackages = await prisma.package.count();
+  if (existingPackages > 0) {
+    console.log('✅ Database already seeded, skipping...');
+    return;
+  }
+
   // Create sample packages
   const packages = await prisma.package.createMany({
     data: [

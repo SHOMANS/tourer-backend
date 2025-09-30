@@ -9,6 +9,15 @@ async function main() {
   // Always seed fresh data (remove the check)
   console.log('🔄 Clearing existing data and seeding fresh...');
 
+  // Clear existing data in the correct order (due to foreign key constraints)
+  await prisma.review.deleteMany({});
+  await prisma.booking.deleteMany({});
+  await prisma.package.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.carouselItem.deleteMany({});
+
+  console.log('✅ Existing data cleared');
+
   // Create sample packages
   const packages = await prisma.package.createMany({
     data: [

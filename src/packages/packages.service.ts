@@ -57,6 +57,25 @@ export class PackagesService {
       sortOrder = 'desc',
     } = query;
 
+    // Ensure page and limit are numbers
+    const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
+    const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+
+    // Validate and map sortBy field
+    const validSortFields = {
+      createdAt: 'createdAt',
+      updatedAt: 'updatedAt',
+      title: 'title',
+      price: 'price',
+      rating: 'rating',
+      location: 'locationName', // Map location to locationName
+      locationName: 'locationName',
+      difficulty: 'difficulty',
+      duration: 'duration',
+    };
+
+    const actualSortBy = validSortFields[sortBy] || 'createdAt';
+
     // Build where clause
     const where: Prisma.PackageWhereInput = {
       isActive: true,
@@ -91,15 +110,15 @@ export class PackagesService {
     }
 
     // Calculate pagination
-    const skip = (page - 1) * limit;
+    const skip = (pageNum - 1) * limitNum;
 
     // Execute queries
     const [packages, total] = await Promise.all([
       this.prisma.package.findMany({
         where,
         skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
+        take: limitNum,
+        orderBy: { [actualSortBy]: sortOrder },
       }),
       this.prisma.package.count({ where }),
     ]);
@@ -107,10 +126,10 @@ export class PackagesService {
     return {
       data: packages,
       pagination: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / limitNum),
       },
     };
   }
@@ -124,7 +143,19 @@ export class PackagesService {
       throw new NotFoundException(`Package with ID ${id} not found`);
     }
 
-    return package_;
+    // Always calculate the actual review count from the database
+    const actualReviewCount = await this.prisma.review.count({
+      where: {
+        packageId: id,
+        isApproved: true,
+      },
+    });
+
+    // Return package with the actual review count
+    return {
+      ...package_,
+      reviewCount: actualReviewCount,
+    };
   }
 
   async findBySlug(slug: string): Promise<Package> {
@@ -136,7 +167,19 @@ export class PackagesService {
       throw new NotFoundException(`Package with slug ${slug} not found`);
     }
 
-    return package_;
+    // Always calculate the actual review count from the database
+    const actualReviewCount = await this.prisma.review.count({
+      where: {
+        packageId: package_.id,
+        isApproved: true,
+      },
+    });
+
+    // Return package with the actual review count
+    return {
+      ...package_,
+      reviewCount: actualReviewCount,
+    };
   }
 
   async update(

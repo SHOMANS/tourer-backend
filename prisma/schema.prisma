@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin-arm64", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,28 +9,143 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?  // Optional for social logins
-  firstName String?
-  lastName  String?
-  role      UserRole @default(USER)
-  isActive  Boolean  @default(true)
-  
-  // Social login fields
-  googleId     String? @unique
-  photoUrl     String?
-  provider     AuthProvider? @default(LOCAL)
-  providerId   String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  bookings Booking[]
-  reviews  Review[]
+  id         String        @id @default(cuid())
+  email      String        @unique
+  password   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  firstName  String?
+  isActive   Boolean       @default(true)
+  lastName   String?
+  role       UserRole      @default(USER)
+  googleId   String?       @unique
+  photoUrl   String?
+  provider   AuthProvider? @default(LOCAL)
+  providerId String?
+  bookings   Booking[]
+  reviews    Review[]
 
   @@map("users")
+}
+
+model Package {
+  id               String      @id @default(cuid())
+  title            String
+  description      String?
+  price            Decimal     @db.Decimal(10, 2)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  availableFrom    DateTime?
+  availableTo      DateTime?
+  category         Category    @default(ADVENTURE)
+  coordinates      String?
+  country          String?
+  coverImage       String?
+  currency         String      @default("USD")
+  difficulty       Difficulty  @default(EASY)
+  duration         Int         @default(1)
+  excludes         String[]
+  highlights       String[]
+  images           String[]
+  includes         String[]
+  isActive         Boolean     @default(true)
+  isAvailable      Boolean     @default(true)
+  itinerary        Json?
+  maxGuests        Int         @default(10)
+  minAge           Int?
+  originalPrice    Decimal?    @db.Decimal(10, 2)
+  rating           Float?      @default(0)
+  reviewCount      Int         @default(0)
+  shortDescription String?
+  slug             String?     @unique
+  tags             String[]
+  locationName     String      @default("TBD")
+  pricingType      PricingType @default(PER_PERSON)
+  bookings         Booking[]
+  locationDetail   Location?
+  reviews          Review[]
+
+  @@map("packages")
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String
+  packageId     String
+  status        BookingStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  contactInfo   Json?
+  currency      String        @default("USD")
+  endDate       DateTime?
+  guestNames    String[]
+  guests        Int           @default(1)
+  notes         String?
+  paymentId     String?
+  paymentStatus PaymentStatus @default(PENDING)
+  startDate     DateTime      @default(now())
+  totalPrice    Decimal       @default(0) @db.Decimal(10, 2)
+  package       Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews       Review[]
+
+  @@map("bookings")
+}
+
+model CarouselItem {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  actionType  ActionType @default(INTERNAL)
+  actionValue String
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("carousel_items")
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  userId       String
+  packageId    String
+  bookingId    String?
+  rating       Int
+  title        String?
+  comment      String?
+  images       String[]
+  isVerified   Boolean  @default(false)
+  isApproved   Boolean  @default(true)
+  helpfulVotes Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  booking      Booking? @relation(fields: [bookingId], references: [id])
+  package      Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Location {
+  id           String   @id @default(cuid())
+  packageId    String   @unique
+  name         String
+  address      String?
+  city         String?
+  state        String?
+  country      String?
+  zipCode      String?
+  latitude     Float
+  longitude    Float
+  description  String?
+  instructions String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  package      Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@map("locations")
 }
 
 enum UserRole {
@@ -45,61 +158,6 @@ enum AuthProvider {
   GOOGLE
   FACEBOOK
   APPLE
-}
-
-model Package {
-  id            String      @id @default(cuid())
-  title         String
-  description   String?
-  shortDescription String?
-  price         Decimal     @db.Decimal(10, 2)
-  originalPrice Decimal?    @db.Decimal(10, 2) // For showing discounts
-  currency      String      @default("USD")
-  pricingType   PricingType @default(PER_PERSON)
-  
-  // Tour details
-  duration      Int         @default(1) // Duration in days
-  maxGuests     Int         @default(10)
-  minAge        Int?        
-  difficulty    Difficulty  @default(EASY)
-  category      Category    @default(ADVENTURE)
-  
-  // Location details (basic)
-  locationName  String      @default("TBD") // Main location/city
-  country       String?
-  coordinates   String?     // JSON string with lat/lng
-  
-  // Media and content
-  images        String[]    // Array of image URLs
-  coverImage    String?     // Main image URL
-  highlights    String[]    // Key highlights
-  includes      String[]    // What's included
-  excludes      String[]    // What's excluded
-  itinerary     Json?       // Detailed day-by-day itinerary
-  
-  // Availability and booking
-  isActive      Boolean     @default(true)
-  isAvailable   Boolean     @default(true)
-  availableFrom DateTime?
-  availableTo   DateTime?
-  
-  // SEO and metadata
-  slug          String?     @unique
-  tags          String[]    // Search tags
-  
-  // Ratings and reviews
-  rating        Float?      @default(0)
-  reviewCount   Int         @default(0)
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  // Relations
-  bookings      Booking[]
-  reviews       Review[]
-  locationDetail Location?
-
-  @@map("packages")
 }
 
 enum Category {
@@ -124,41 +182,6 @@ enum Difficulty {
   EXTREME
 }
 
-model Booking {
-  id          String        @id @default(cuid())
-  userId      String
-  packageId   String
-  status      BookingStatus @default(PENDING)
-  
-  // Booking details
-  startDate   DateTime      @default(now()) // When the tour starts
-  endDate     DateTime?     // When the tour ends (calculated from duration)
-  guests      Int           @default(1)
-  totalPrice  Decimal       @db.Decimal(10, 2) @default(0)
-  currency    String        @default("USD")
-  
-  // Traveler information
-  guestNames  String[]      // Names of all travelers
-  contactInfo Json?         // Contact details, special requirements
-  
-  // Payment information (for future payment integration)
-  paymentStatus PaymentStatus @default(PENDING)
-  paymentId     String?      // External payment reference
-  
-  // Booking notes
-  notes       String?       // Special requests or notes
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Relations
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  reviews Review[]
-
-  @@map("bookings")
-}
-
 enum PaymentStatus {
   PENDING
   PAID
@@ -173,82 +196,9 @@ enum BookingStatus {
   COMPLETED
 }
 
-model CarouselItem {
-  id          String      @id @default(cuid())
-  title       String
-  description String?
-  imageUrl    String
-  actionType  ActionType  @default(INTERNAL)
-  actionValue String      // URL or route name
-  isActive    Boolean     @default(true)
-  sortOrder   Int         @default(0)
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@map("carousel_items")
-}
-
 enum ActionType {
-  INTERNAL    // Navigate to internal screen
-  EXTERNAL    // Open external URL
-}
-
-model Review {
-  id          String      @id @default(cuid())
-  userId      String
-  packageId   String
-  bookingId   String?     // Optional link to booking
-  
-  // Review content
-  rating      Int         // 1-5 stars
-  title       String?     // Optional review title
-  comment     String?     // Review text
-  images      String[]    // Review photos
-  
-  // Review metadata
-  isVerified  Boolean     @default(false) // If user actually booked/took the tour
-  isApproved  Boolean     @default(true)  // For moderation
-  helpfulVotes Int        @default(0)     // How many found it helpful
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package     Package     @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  booking     Booking?    @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-
-  @@map("reviews")
-}
-
-model Location {
-  id          String   @id @default(cuid())
-  packageId   String   @unique
-  
-  // Address information
-  name        String   // Location name/title
-  address     String?  // Full address
-  city        String?
-  state       String?
-  country     String?
-  zipCode     String?
-  
-  // Coordinates
-  latitude    Float
-  longitude   Float
-  
-  // Additional info
-  description String?  // Location description
-  instructions String? // How to get there, meeting point info
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
-
-  @@map("locations")
+  INTERNAL
+  EXTERNAL
 }
 
 enum PricingType {

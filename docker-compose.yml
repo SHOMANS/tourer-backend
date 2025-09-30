@@ -1,13 +1,15 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
     image: postgres:18
     restart: always
+    command: postgres -c 'max_connections=200' -c 'shared_buffers=24MB'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mvpdb
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
@@ -33,22 +35,15 @@ services:
       - pgadmin_data:/var/lib/pgadmin
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     restart: always
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/mvpdb?schema=public
+      JWT_SECRET: 784c03805b35add1859289e544b5304d02e403a5d904efeb672561d2f9af715b2e9b233224a9161169f348e9833c320c470e2d22f099f3f0b289c7f0b35751ac
+      NODE_ENV: production
       PORT: 3000
-      JWT_SECRET: example_secret
     ports:
-      - "3000:3000"
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - .:/app
-      - /app/node_modules
+      - "3001:3000"
 
 volumes:
   postgres_data:

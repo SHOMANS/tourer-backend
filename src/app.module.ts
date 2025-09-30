@@ -7,6 +7,8 @@ import { AdminModule } from './admin/admin.module';
 import { PackagesModule } from './packages/packages.module';
 import { UploadModule } from './upload/upload.module';
 import { CarouselModule } from './carousel/carousel.module';
+import { BookingsModule } from './bookings/bookings.module';
+import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [
@@ -15,8 +17,9 @@ import { CarouselModule } from './carousel/carousel.module';
     PackagesModule,
     UploadModule,
     CarouselModule,
+    BookingsModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService],
+  providers: [AppService, PrismaService],
 })
 export class AppModule {}

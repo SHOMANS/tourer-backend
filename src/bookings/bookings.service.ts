@@ -93,80 +93,151 @@ export class BookingsService {
   }
 
   async findAll(query: QueryBookingsDto) {
-    const {
-      search,
-      status,
-      paymentStatus,
-      userId,
-      packageId,
-      page = 1,
-      limit = 10,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = query;
+    try {
+      console.log('findAll called with query:', query);
+      const {
+        search,
+        status,
+        paymentStatus,
+        userId,
+        packageId,
+        page = 1,
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+      } = query;
 
-    // Build where clause
-    const where: Prisma.BookingWhereInput = {};
+      // Ensure page and limit are numbers
+      const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
+      const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
 
-    if (search) {
-      where.OR = [
-        { user: { firstName: { contains: search, mode: 'insensitive' } } },
-        { user: { lastName: { contains: search, mode: 'insensitive' } } },
-        { user: { email: { contains: search, mode: 'insensitive' } } },
-        { package: { title: { contains: search, mode: 'insensitive' } } },
-        { guestNames: { hasSome: [search] } },
-      ];
-    }
+      console.log('Converted values:', {
+        pageNum,
+        limitNum,
+        originalPage: page,
+        originalLimit: limit,
+      });
 
-    if (status) where.status = status;
-    if (paymentStatus) where.paymentStatus = paymentStatus;
-    if (userId) where.userId = userId;
-    if (packageId) where.packageId = packageId;
+      // Build where clause
+      const where: Prisma.BookingWhereInput = {};
 
-    // Calculate pagination
-    const skip = (page - 1) * limit;
-
-    // Execute queries
-    const [bookings, total] = await Promise.all([
-      this.prisma.booking.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
+      if (search) {
+        where.OR = [
+          {
+            user: {
+              firstName: {
+                contains: search,
+                mode: 'insensitive',
+              },
             },
           },
-          package: {
-            select: {
-              id: true,
-              title: true,
-              locationName: true,
-              duration: true,
-              coverImage: true,
-              price: true,
-              currency: true,
+          {
+            user: {
+              lastName: {
+                contains: search,
+                mode: 'insensitive',
+              },
             },
           },
-        },
-      }),
-      this.prisma.booking.count({ where }),
-    ]);
+          {
+            user: {
+              email: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            package: {
+              title: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        ];
+      }
 
-    return {
-      data: bookings,
-      pagination: {
-        page,
-        limit,
+      if (status) where.status = status;
+      if (paymentStatus) where.paymentStatus = paymentStatus;
+      if (userId) where.userId = userId;
+      if (packageId) where.packageId = packageId;
+
+      console.log('findAll where clause:', JSON.stringify(where, null, 2));
+
+      // Calculate pagination
+      const skip = (pageNum - 1) * limitNum;
+
+      console.log('findAll pagination:', { pageNum, limitNum, skip });
+
+      // Execute queries with better error handling
+      let bookings: any[] = [];
+      let total: number = 0;
+
+      try {
+        [bookings, total] = await Promise.all([
+          this.prisma.booking.findMany({
+            where,
+            skip,
+            take: limitNum,
+            orderBy: { [sortBy]: sortOrder },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+              package: {
+                select: {
+                  id: true,
+                  title: true,
+                  locationName: true,
+                  duration: true,
+                  coverImage: true,
+                  price: true,
+                  currency: true,
+                },
+              },
+            },
+          }),
+          this.prisma.booking.count({ where }),
+        ]);
+      } catch (prismaError: unknown) {
+        console.error('Prisma query error:', prismaError);
+        const errorMessage =
+          prismaError instanceof Error
+            ? prismaError.message
+            : 'Unknown database error';
+        throw new Error(`Database query failed: ${errorMessage}`);
+      }
+
+      console.log('findAll results:', {
+        bookingsCount: bookings.length,
         total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+      });
+
+      return {
+        data: bookings,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      };
+    } catch (error: unknown) {
+      console.error('findAll error:', error);
+      // Re-throw with more context
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Database query failed')) {
+        throw error;
+      }
+      throw new Error(`Booking query failed: ${errorMessage}`);
+    }
   }
 
   async findOne(id: string, userId?: string): Promise<Booking> {
@@ -221,7 +292,30 @@ export class BookingsService {
   }
 
   async findUserBookings(userId: string, query: QueryBookingsDto) {
-    return this.findAll({ ...query, userId });
+    console.log('=== findUserBookings SERVICE START ===');
+    console.log('userId:', userId);
+    console.log('query:', query);
+    try {
+      console.log('About to call this.findAll...');
+      const result = await this.findAll({ ...query, userId });
+      console.log('findUserBookings result:', {
+        dataCount: result.data?.length,
+        pagination: result.pagination,
+      });
+      console.log('=== findUserBookings SERVICE SUCCESS ===');
+      return result;
+    } catch (error) {
+      console.error('=== findUserBookings SERVICE ERROR ===');
+      console.error('findUserBookings error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error.constructor.name);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      console.error('=== END findUserBookings SERVICE ERROR ===');
+      throw error;
+    }
   }
 
   async update(
@@ -241,7 +335,21 @@ export class BookingsService {
 
       // Prevent non-admin users from updating certain fields
       if (userRole !== 'ADMIN') {
-        const restrictedFields = ['status', 'paymentStatus', 'paymentId'];
+        const restrictedFields = ['paymentStatus', 'paymentId'];
+
+        // Users can only set status to 'CANCELLED' for their own bookings
+        if (updateBookingDto.status !== undefined) {
+          if (
+            updateBookingDto.status !== 'CANCELLED' ||
+            existingBooking.userId !== userId
+          ) {
+            throw new ForbiddenException(
+              'Only administrators can update status, except users can cancel their own bookings',
+            );
+          }
+        }
+
+        // Check other restricted fields
         for (const field of restrictedFields) {
           if (updateBookingDto[field] !== undefined) {
             throw new ForbiddenException(

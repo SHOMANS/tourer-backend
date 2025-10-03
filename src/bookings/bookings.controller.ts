@@ -42,9 +42,33 @@ export class BookingsController {
     return this.bookingsService.getBookingStats();
   }
 
-  @Get('my-bookings')
-  findMyBookings(@Query() query: QueryBookingsDto, @GetUser() user: any) {
-    return this.bookingsService.findUserBookings(user.id, query);
+  @Get('user-bookings')
+  async findMyBookings(@Query() query: QueryBookingsDto, @GetUser() user: any) {
+    console.log('=== CONTROLLER user-bookings START ===');
+    console.log('User from @GetUser():', user);
+    console.log('Query params:', query);
+    try {
+      const result = await this.bookingsService.findUserBookings(
+        user.id,
+        query,
+      );
+      console.log('=== CONTROLLER user-bookings SUCCESS ===');
+      return result;
+    } catch (error) {
+      console.error('=== CONTROLLER user-bookings ERROR ===');
+      console.error('Controller error:', error);
+      throw error;
+    }
+  }
+
+  @Get('test-my-bookings')
+  testMyBookings(@GetUser() user: any) {
+    console.log('Test endpoint called with user:', user?.id);
+    return {
+      message: 'Test endpoint working',
+      userId: user?.id,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get(':id')
